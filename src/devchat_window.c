@@ -1,6 +1,7 @@
 /*
  * devchat_window.c
- * Copyright (C) Samuel Vincent Creshal 2010 <creshal@arcor.de>
+ * Modified version by UFeindschiff
+ * Original by Samuel Vincent Creshal 2010 <creshal@arcor.de>
  *
  * devchat-gui is free software: you can redistribute it and/or modify
  * under the terms of the GNU General Public License as published by the
@@ -445,10 +446,6 @@ devchat_window_init (DevchatWindow* self)
   gtk_menu_item_set_submenu(menu_view,GTK_WIDGET(view_sub));
 
   GtkMenuShell* about_sub = GTK_MENU_SHELL(gtk_menu_new());
-  gtk_menu_shell_append(about_sub, item_faq);
-  gtk_menu_shell_append(about_sub, item_report);
-  gtk_menu_shell_append(about_sub, item_update);
-  gtk_menu_shell_append(about_sub, gtk_menu_item_new());
   gtk_menu_shell_append(about_sub, item_about);
   gtk_menu_item_set_submenu(menu_about,GTK_WIDGET(about_sub));
 
@@ -702,7 +699,7 @@ devchat_window_init (DevchatWindow* self)
   g_object_set (self->session, SOUP_SESSION_USER_AGENT, "Mozilla/5.0 (compatible)",
                                SOUP_SESSION_PROXY_URI, soup_uri_new (self->settings.proxy), NULL);
 
-  gchar* cookies = soup_cookie_jar_get_cookies (self->jar, soup_uri_new ("http://www.egosoft.com"), FALSE);
+  gchar* cookies = soup_cookie_jar_get_cookies (self->jar, soup_uri_new ("https://www.egosoft.com"), FALSE);
   if (cookies)
   {
     /*Check whether we're really logged in.*/
@@ -717,7 +714,7 @@ devchat_window_init (DevchatWindow* self)
         dbg ("Found cookies still edible.");
 
       gtk_label_set_text (GTK_LABEL (self->statuslabel), _("Determining user level..."));
-      SoupMessage* step2 = soup_message_new ("GET", "http://www.egosoft.com");
+      SoupMessage* step2 = soup_message_new ("GET", "https://www.egosoft.com");
 
       if (debug)
         dbg ("Trying to determine userlevel...");
@@ -1006,7 +1003,7 @@ static void devchat_window_set_property (GObject* object, guint id, const GValue
     case SETTINGS_SHOWID: window->settings.showid = g_value_get_boolean (value); break;
     case SETTINGS_STEALTHJOIN: window->settings.stealthjoin = g_value_get_boolean (value); break;
     case SETTINGS_AUTOJOIN: window->settings.autojoin = g_value_get_boolean (value);
-                            if (window->firstrun && window->settings.autojoin && !soup_cookie_jar_get_cookies (window->jar, soup_uri_new ("http://www.egosoft.com"), FALSE))
+                            if (window->firstrun && window->settings.autojoin && !soup_cookie_jar_get_cookies (window->jar, soup_uri_new ("https://www.egosoft.com"), FALSE))
                               login (window->btn_connect, devchat_cb_data_new (window, NULL));
                             break;
     case SETTINGS_SHOWHIDDEN: window->settings.showhidden = g_value_get_boolean (value); break;
@@ -1160,7 +1157,7 @@ void destroy (GtkObject* widget, DevchatCBData* data)
 
   if (!(data->window->firstrun))
   {
-    SoupMessage* msg = soup_message_new ("GET", "http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
+    SoupMessage* msg = soup_message_new ("GET", "https://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=logout_silent");
     soup_session_queue_message (data->window->session, msg, SOUP_SESSION_CALLBACK (quit_cb), data);
   #ifdef INGAME
     ingame_update_status (data, INGAME_STATUS_DISCONNECTED);
@@ -1297,7 +1294,7 @@ void login (GtkWidget* widget, DevchatCBData* data)
   gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Logging in..."));
   data->window->settings.user = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->user_entry)));
   data->window->settings.pass = g_strdup (gtk_entry_get_text(GTK_ENTRY(data->window->pass_entry)));
-  SoupMessage* loginparams = soup_form_request_new("POST", "http://forum.egosoft.com/login.php","username",data->window->settings.user,"password",data->window->settings.pass,"autologin","on","redirect","","webroot","0","login","Log in",NULL);
+  SoupMessage* loginparams = soup_form_request_new("POST", "https://forum.egosoft.com/login.php","username",data->window->settings.user,"password",data->window->settings.pass,"autologin","on","redirect","","webroot","0","login","Log in",NULL);
   soup_session_queue_message (data->window->session, loginparams, SOUP_SESSION_CALLBACK (login_cb), data);
 }
 
@@ -1332,7 +1329,7 @@ void login_cb (SoupSession* session, SoupMessage* msg, DevchatCBData* data)
       dbg ("Login successful.");
 
     gtk_label_set_text (GTK_LABEL (data->window->statuslabel), _("Login successful! Determining user level..."));
-    SoupMessage* step2 = soup_message_new("GET","http://www.egosoft.com");
+    SoupMessage* step2 = soup_message_new("GET","https://www.egosoft.com");
 
     if (debug)
       dbg ("Trying to determine userlevel...");
@@ -1447,7 +1444,7 @@ void remote_level (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   }
 
   /* Determine sid for CSRF-hardened API */
-  gchar* cookies = soup_cookie_jar_get_cookies (data->window->jar, soup_uri_new ("http://www.egosoft.com"), FALSE);
+  gchar* cookies = soup_cookie_jar_get_cookies (data->window->jar, soup_uri_new ("https://www.egosoft.com"), FALSE);
   const gchar* sid_cookie = g_strstr_len (cookies, -1, "phpbb2mysql_sid");
   const gchar* end_sid = g_strstr_len (sid_cookie, 64, ";");
   int len = end_sid - sid_cookie - strlen("phpbb2mysql_sid=");
@@ -1500,7 +1497,7 @@ user_list_poll (DevchatCBData* data)
 
     GSList* tmp = data->window->users_online;
 
-    gchar* uri = g_strdup ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=");
+    gchar* uri = g_strdup ("https://www.egosoft.com/x/questsdk/devchat/obj/request.obj?users=");
 
     while (tmp)
     {
@@ -1524,7 +1521,7 @@ message_list_poll (DevchatCBData* data)
     if (debug)
       dbg ("Starting message list poll...");
 
-    data->window->message_message = soup_message_new ("GET", g_strdup_printf("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
+    data->window->message_message = soup_message_new ("GET", g_strdup_printf("https://www.egosoft.com/x/questsdk/devchat/obj/request.obj?lid=%s",data->window->lastid));
     g_signal_connect (data->window->message_message, "got-chunk", G_CALLBACK (message_list_chunk), data);
     soup_session_queue_message (data->window->session, data->window->message_message, SOUP_SESSION_CALLBACK (message_list_get), data);
     data->window->message_timeout_id = g_timeout_add_seconds (data->window->settings.update_time * 10, (GSourceFunc) message_list_timeout, data);
@@ -1675,7 +1672,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
                   g_free (dbg_msg);
                 }
 
-                SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+                SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("https://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
                 soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
                 if (debug)
                   dbg ("Search request queued, will be executed when idling.");
@@ -1696,7 +1693,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
                   if ((time(NULL) - buf.st_mtime) > 86400)
                   {
                     /*Avatar was last modified more than one day ago, checking for new one.*/
-                    SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+                    SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("https://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
                     soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
                     data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
                   }
@@ -1709,7 +1706,7 @@ void user_list_get (SoupSession* s, SoupMessage* m, DevchatCBData* data)
                 {
                   err (_("Error D: Error stat()ing avatar file! Trying to re-download it. If problem persists, check permissions for avatar directory."));
 
-                  SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+                  SoupMessage* ava_get = soup_message_new ("GET",g_strdup_printf("https://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
                   soup_session_queue_message (data->window->session, ava_get, SOUP_SESSION_CALLBACK (search_ava_cb), devchat_cb_data_new (data->window, g_strdup(uid)));
                   data->window->users_without_avatar = g_slist_prepend (data->window->users_without_avatar,g_strdup(uid));
                 }
@@ -1924,7 +1921,7 @@ void search_ava_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
     else
       g_hash_table_insert (data->window->moderators, g_strdup ((gchar*) data->data), g_strdup ("n"));
 
-    GRegex* regex = g_regex_new ("<img id=\"avatar\" src=\"http:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
+    GRegex* regex = g_regex_new ("<img id=\"avatar\" src=\"https:\\/\\/.*\\.(jpg|png|gif)", G_REGEX_UNGREEDY, 0, NULL);
     gchar** profile_lines = g_strsplit (profile, "\n",-1);
 
     gchar* filename = g_build_filename (data->window->avadir, data->data, NULL);
@@ -2310,10 +2307,7 @@ void ce_parse (gchar* msglist, DevchatCBData* self, gchar* date)
         if (g_strstr_len (message_up, -1, kickmsg) && badass (name, self) && !(self->window->firstrun))
         {
           gchar* kickmsg;
-          if (g_strcmp0 (self->window->settings.servername, "SovietServer") == 0)
-            kickmsg = g_strdup ("[red](SovietServer):[/red] In Soviet Russia, chat kicks /me …");
-          else
-            kickmsg = g_strdup_printf ("[red](%s):[/red] /me has been kicked.", self->window->settings.servername);
+          kickmsg = g_strdup_printf ("[red](%s):[/red] /me has been kicked.", self->window->settings.servername);
           devchat_window_text_send (self, g_strdup (kickmsg), NULL, "1", TRUE);
         #ifdef INGAME
           ingame_update_status (self, INGAME_STATUS_KICKED);
@@ -2520,7 +2514,7 @@ gboolean badass (gchar* name, DevchatCBData* data)
     gchar* known_permission = (gchar*) g_hash_table_lookup (data->window->moderators, uid);
     if (!known_permission)
     {
-      SoupMessage* pro_get = soup_message_new ("GET",g_strdup_printf("http://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
+      SoupMessage* pro_get = soup_message_new ("GET",g_strdup_printf("https://forum.egosoft.com/profile.php?mode=viewprofile&u=%s",uid));
       guint status = soup_session_send_message (data->window->session, pro_get);
 
       if (status == 200)
@@ -2839,7 +2833,7 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
             gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (data->data), img, a);
             gtk_widget_show (img);
           }
-          else if (uri && g_regex_match_simple ("http://.*?\\.([a-z][a-z]+)/.*?\\.(gif|jpg|png|tga|tif|tiff|webp)", uri, 0, 0)) /*Only attempt downloading if it's really an image. I will refrain from insulting Alex this time.*/
+          else if (uri && g_regex_match_simple ("https://.*?\\.([a-z][a-z]+)/.*?\\.(gif|jpg|png|tga|tif|tiff|webp)", uri, 0, 0)) /*Only attempt downloading if it's really an image. I will refrain from insulting Alex this time.*/
           {
             if (real_debug) {
               dbg_msg = g_strdup_printf ("Searching for image %s... ", uri);
@@ -2956,7 +2950,7 @@ gchar* parse_message (gchar* message_d, DevchatCBData* data)
             tagname = g_strconcat ("url::", ((DevchatHTMLAttr*) top->attrs->data)->value, NULL); /*Mailto*/
 
           /*Stupid server always interpreting forum. as link.*/
-          if (g_strcmp0 (tagname, "url::http://forum.") == 0)
+          if (g_strcmp0 (tagname, "url::https://forum.") == 0)
           {
             g_free (tagname);
             tagname = NULL;
@@ -3734,7 +3728,7 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
     gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_browser), 2, data->window->settings.browser);
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_browser), 2);
   }
-  gtk_widget_set_tooltip_text (entry_browser, _("Please note that <native> is only supported on Microsoft Windows®, Debian and Debian derivates. You can specify the uri with %s if it's *not* the last parameter (i.e.: weird-browser %s --some-option)."));
+  gtk_widget_set_tooltip_text (entry_browser, _("Please note that <native> is not officially supported anymore. You can specify the uri with %s if it's *not* the last parameter (i.e.: weird-browser %s --some-option)."));
 
   gtk_box_pack_start (GTK_BOX (hbox9), label_keywords,FALSE,FALSE,0);
   gtk_box_pack_start (GTK_BOX (hbox9), entry_keywords,TRUE,TRUE,0);
@@ -3768,11 +3762,11 @@ void config_cb(GtkWidget* widget, DevchatCBData* data)
   GtkWidget* hbox13 = gtk_hbox_new (TRUE, 1);
   GtkWidget* label_msg = gtk_label_new (_("Chatserver string: "));
   GtkWidget* entry_msg = gtk_combo_box_entry_new_text ();
-  gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 0, "SovietServer");
-  gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 1, "ChatServer");
-  if (g_strcmp0 (data->window->settings.servername, "SovietServer") == 0)
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 0, "ChatServer");
+  gtk_combo_box_insert_text (GTK_COMBO_BOX (entry_msg), 1, "HamsterServer");
+  if (g_strcmp0 (data->window->settings.servername, "ChatServer") == 0)
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_msg), 0);
-  else if (g_strcmp0 (data->window->settings.servername, "ChatServer") == 0)
+  else if (g_strcmp0 (data->window->settings.servername, "HamsterServer") == 0)
     gtk_combo_box_set_active (GTK_COMBO_BOX (entry_msg), 1);
   else
   {
@@ -4184,7 +4178,7 @@ void devchat_window_close_search (GtkWidget* widget, DevchatCBData* data)
 
 void go_forum(GtkWidget* widget, DevchatCBData* data)
 {
-  gchar* url = g_strdup ("http://forum.egosoft.com/");
+  gchar* url = g_strdup ("https://forum.egosoft.com/");
   switch (GPOINTER_TO_INT (data->data))
   {
     case -255: url = g_strconcat (url, "profile.php?mode=editprofile", NULL); break;
@@ -4656,7 +4650,7 @@ void devchat_window_text_send (DevchatCBData* data, gchar* text, gchar* target, 
     g_free (dbg_msg);
   }
 
-  SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text,"&sid=",data->window->sid, NULL));
+  SoupMessage* post = soup_message_new("GET", g_strconcat ("https://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post&chatlevel=",sendlevel,"&textinput=", enc_text,"&sid=",data->window->sid, NULL));
   soup_session_queue_message (data->window->session, post, SOUP_SESSION_CALLBACK (msg_sent_cb), devchat_cb_data_new (data->window, g_strconcat ("&chatlevel=",sendlevel,"&textinput=", enc_text, NULL)));
 
   g_free (text);
@@ -4770,7 +4764,7 @@ void msg_sent_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
   {
     err (_("Error M: Error sending message, trying to resend..."));
 
-    SoupMessage* post = soup_message_new("GET", g_strconcat ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post", (gchar*) data->data, NULL));
+    SoupMessage* post = soup_message_new("GET", g_strconcat ("https://www.egosoft.com/x/questsdk/devchat/obj/request.obj?cmd=post", (gchar*) data->data, NULL));
     if (soup_session_send_message (s, post) != 200)
       err (_("Error M2: Error sending message, retry failed. Aborting."));
   }
@@ -4863,7 +4857,7 @@ void show_his (GtkWidget* widget, DevchatCBData* data)
     case GTK_RESPONSE_ACCEPT:
       gtk_calendar_get_date (GTK_CALENDAR (cal), &year, &month, &day);
       month++;
-      uri = g_strdup_printf ("http://www.egosoft.com/x/questsdk/devchat/obj/request.obj?date=%02i/%02i/%04i",month,day,year);
+      uri = g_strdup_printf ("https://www.egosoft.com/x/questsdk/devchat/obj/request.obj?date=%02i/%02i/%04i",month,day,year);
 
       DevchatConversation* conv = g_hash_table_lookup (data->window->conversations, g_strdup_printf ("History for %02i/%02i/%04i",month,day,year));
       if (conv)
@@ -4899,14 +4893,14 @@ void his_cb (SoupSession* s, SoupMessage* m, DevchatCBData* data)
 
 void about_cb (GtkWidget* widget, DevchatCBData* data)
 {
-  const gchar* authors[] = {"Samuel Vincent Creshal", "Fanchen", 0};
+  const gchar* authors[] = {"Unbekanntes Feindschiff", "Samuel Vincent Creshal", "Fanchen", 0};
   const gchar* artists[] = {"Silvio Walther",0};
 
   GtkWidget* dialog = gtk_about_dialog_new ();
   gtk_about_dialog_set_program_name (GTK_ABOUT_DIALOG (dialog), APPNAME);
   gtk_about_dialog_set_version (GTK_ABOUT_DIALOG (dialog), VERSION);
-  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Samuel Creshal 2010\nPortions © Egosoft\nPortions © International Organization for Standardization 1986");
-  gtk_about_dialog_set_website (GTK_ABOUT_DIALOG (dialog), "http://dev.yaki-syndicate.de");
+  gtk_about_dialog_set_copyright (GTK_ABOUT_DIALOG (dialog), "© Unbekanntes Feindschiff 2017\nOriginal version © Samuel Creshal 2010\nPortions © Egosoft\nPortions © International Organization for Standardization 1986");
+  //gtk_about_dialog_set_website (GTK_ABOUT_DIALOG (dialog), "http://dev.yaki-syndicate.de");
   gtk_about_dialog_set_comments (GTK_ABOUT_DIALOG (dialog), _(" - Gtk+ client for X-Devchat."));
   gtk_about_dialog_set_authors (GTK_ABOUT_DIALOG (dialog), authors);
   gtk_about_dialog_set_artists (GTK_ABOUT_DIALOG (dialog), artists);
